@@ -27,8 +27,15 @@ TripleUtils.prototype = {
      * @param lookupEdgeAddr
      * @returns {src: number, edge: number, trg: number}
      */
-    getEdge: function (lookupEdgeAddr) {
-        return this.triples.find(([src, {addr}, trg]) => addr == lookupEdgeAddr);
+    getEdge: function (lookupEdgeAddr, targetAddr) {
+        let res;
+
+        if (targetAddr)
+            res =  this.triples.find(([src, {addr}, trg]) => addr == lookupEdgeAddr && trg.addr == targetAddr);
+        else
+            res = this.triples.find(([src, {addr}, trg]) => addr == lookupEdgeAddr);
+
+        return res;
     },
 
     /*! Search all constructions, that equal to template. 

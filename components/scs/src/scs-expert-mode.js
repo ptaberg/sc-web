@@ -14,7 +14,7 @@ class ExpertModeManager {
     removeExpertData({triples, ...data}) {
         this.initTripleUtils(triples);
         return {
-            triples: this.applyFilters(triples),
+            triples: this.applyFilters(triples, data.keywords),
             ...data
         };
     }
@@ -25,13 +25,14 @@ class ExpertModeManager {
         triples.forEach((triple) => this.tripleUtils.appendTriple(triple));
     }
 
-    applyFilters(triples) {
+    applyFilters(triples, keywords) {
         let filteredTriples = triples;
         const filters = [
             (triples) => this.removeTriplesWithNotCurrentLanguage(triples),
             (triples) => this.removeCurrentLanguageNode(triples),
             (triples) => this.removeExpertSystemIdTriples(triples),
-            (triples) => this.transformKeyScElement(triples),
+            (triples) => this.transformKeyScElement(triples, keywords),
+            (triples) => this.transformTextTranslation(triples, keywords),
         ];
         filters.forEach(filter => {
             this.initTripleUtils(filteredTriples);
@@ -114,14 +115,16 @@ class ExpertModeManager {
      * @param triples
      * @returns filteredTriples
      */
-    transformKeyScElement(triples) {
+    transformKeyScElement(triples, keywords) {
         const rrelKeyScElement = this.getKeynode("rrel_key_sc_element");
         const arcsToRemove = [];
         const newTriples = [];
         this.tripleUtils
             .find3_f_a_a(rrelKeyScElement, sc_type_arc_pos_const_perm, sc_type_arc_pos_const_perm)
             .forEach(triple => {
-                const [translationNode, edge, sourceNode] = this.tripleUtils.getEdge(triple[2].addr);
+                const foundEdge = this.tripleUtils.getEdge(triple[2].addr, keywords[0].addr);
+                if (!foundEdge) return;
+                const [translationNode, edge, sourceNode] = foundEdge;
                 const preLinkNode = this.findPreLinkNodeTriple(translationNode);
                 if (preLinkNode) {
                     arcsToRemove.push(preLinkNode[1], preLinkNode[2], preLinkNode[3]);
@@ -133,6 +136,24 @@ class ExpertModeManager {
                 }
             });
 
+        const arcsToRemoveAddrs = arcsToRemove.map(({addr}) => addr);
+        return this.removeArcs(arcsToRemoveAddrs, triples).concat(newTriples);
+    }
+
+    transformTextTranslation(triples, ke) {
+        const keyword = ke[0];
+        const prelinkNodeTriple = this.findPreLinkNodeTriple(keyword);
+
+        if (!prelinkNodeTriple) return triples;
+        const arcsToRemove = [];
+        const newTriples = [];
+        //arcsToRemove.push(prelinkNodeTriple[1], prelinkNodeTriple[3]);
+
+        const linkNodeTriple = this.findLinkNodeTriple(prelinkNodeTriple[0]);
+        if (linkNodeTriple) {
+            arcsToRemove.push(linkNodeTriple[0], linkNodeTriple[1]);
+            newTriples.push([linkNodeTriple[2], prelinkNodeTriple[1], keyword]);
+        }
         const arcsToRemoveAddrs = arcsToRemove.map(({addr}) => addr);
         return this.removeArcs(arcsToRemoveAddrs, triples).concat(newTriples);
     }
