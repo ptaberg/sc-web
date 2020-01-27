@@ -33,6 +33,8 @@ class ExpertModeManager {
             (triples) => this.removeExpertSystemIdTriples(triples),
             (triples) => this.transformKeyScElement(triples, keywords),
             (triples) => this.transformTextTranslation(triples, keywords),
+            (triples) => this.transformContsCombitation(triples, keywords),
+            (triples) => this.transformContsCombitation(triples, keywords, 'nrel_combination'),
         ];
         filters.forEach(filter => {
             this.initTripleUtils(filteredTriples);
@@ -140,8 +142,8 @@ class ExpertModeManager {
         return this.removeArcs(arcsToRemoveAddrs, triples).concat(newTriples);
     }
 
-    transformTextTranslation(triples, ke) {
-        const keyword = ke[0];
+    transformTextTranslation(triples, keywords) {
+        const keyword = keywords[0];
         const prelinkNodeTriple = this.findPreLinkNodeTriple(keyword);
 
         if (!prelinkNodeTriple) return triples;
@@ -156,6 +158,25 @@ class ExpertModeManager {
         }
         const arcsToRemoveAddrs = arcsToRemove.map(({addr}) => addr);
         return this.removeArcs(arcsToRemoveAddrs, triples).concat(newTriples);
+    }
+
+    transformContsCombitation(triples, keywords, rel = 'nrel_using_constants') {
+        const arcsToRemove = [];
+        const combinationKeyNode = this.getKeynode(rel);
+        const foundTriples = this.tripleUtils.find3_a_a_f(sc_type_node_tuple, sc_type_arc_pos_const_perm, keywords[0].addr);
+
+        foundTriples.forEach(triple => {
+            if (this.tripleUtils.find5_f_a_a_a_f(
+                    triple[0].addr,
+                    sc_type_arc_common,
+                    sc_type_node,
+                    sc_type_arc_pos_const_perm,
+                    combinationKeyNode).length !== 0) {
+                arcsToRemove.push(triple[1]);
+            }
+        });
+        const arcsToRemoveAddrs = arcsToRemove.map(({addr}) => addr);
+        return this.removeArcs(arcsToRemoveAddrs, triples);
     }
 
     findPreLinkNodeTriple(translationNode) {

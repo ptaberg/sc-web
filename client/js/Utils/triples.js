@@ -28,7 +28,7 @@ TripleUtils.prototype = {
      * @returns {src: number, edge: number, trg: number}
      */
     getEdge: function (lookupEdgeAddr, targetAddr) {
-        let res;
+        let res = [];
 
         if (targetAddr)
             res =  this.triples.find(([src, {addr}, trg]) => addr == lookupEdgeAddr && trg.addr == targetAddr);

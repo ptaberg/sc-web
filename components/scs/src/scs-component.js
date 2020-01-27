@@ -14,6 +14,8 @@ SCsComponent = {
             'lang_ru',
             "nrel_sc_text_translation",
             "rrel_example",
+            "nrel_combination",
+            "nrel_using_constants"
         ];
         return keynodes.concat(SCs.SCnSortOrder);
     }
