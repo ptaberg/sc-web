@@ -14,7 +14,7 @@ class ExpertModeManager {
     removeExpertData({triples, ...data}) {
         this.initTripleUtils(triples);
         return {
-            triples: this.applyFilters(triples),
+            triples: this.applyFilters(triples, data.keywords),
             ...data
         };
     }
@@ -25,13 +25,16 @@ class ExpertModeManager {
         triples.forEach((triple) => this.tripleUtils.appendTriple(triple));
     }
 
-    applyFilters(triples) {
+    applyFilters(triples, keywords) {
         let filteredTriples = triples;
         const filters = [
             (triples) => this.removeTriplesWithNotCurrentLanguage(triples),
             (triples) => this.removeCurrentLanguageNode(triples),
             (triples) => this.removeExpertSystemIdTriples(triples),
-            (triples) => this.transformKeyScElement(triples),
+            (triples) => this.transformKeyScElement(triples, keywords),
+            (triples) => this.transformTextTranslation(triples, keywords),
+            (triples) => this.transformUsingConstants(triples, keywords),
+            (triples) => this.transformCombination(triples, keywords),
         ];
         filters.forEach(filter => {
             this.initTripleUtils(filteredTriples);
@@ -114,14 +117,16 @@ class ExpertModeManager {
      * @param triples
      * @returns filteredTriples
      */
-    transformKeyScElement(triples) {
+    transformKeyScElement(triples, keywords) {
         const rrelKeyScElement = this.getKeynode("rrel_key_sc_element");
         const arcsToRemove = [];
         const newTriples = [];
         this.tripleUtils
             .find3_f_a_a(rrelKeyScElement, sc_type_arc_pos_const_perm, sc_type_arc_pos_const_perm)
             .forEach(triple => {
-                const [translationNode, edge, sourceNode] = this.tripleUtils.getEdge(triple[2].addr);
+                const foundEdge = this.tripleUtils.getEdge(triple[2].addr, keywords[0].addr);
+                if (!foundEdge) return;
+                const [translationNode, edge, sourceNode] = foundEdge;
                 const preLinkNode = this.findPreLinkNodeTriple(translationNode);
                 if (preLinkNode) {
                     arcsToRemove.push(preLinkNode[1], preLinkNode[2], preLinkNode[3]);
@@ -137,6 +142,49 @@ class ExpertModeManager {
         return this.removeArcs(arcsToRemoveAddrs, triples).concat(newTriples);
     }
 
+    transformTextTranslation(triples, keywords) {
+        const keyword = keywords[0];
+        const prelinkNodeTriple = this.findPreLinkNodeTriple(keyword);
+
+        if (!prelinkNodeTriple) return triples;
+        const arcsToRemove = [];
+        const newTriples = [];
+
+        const linkNodeTriple = this.findLinkNodeTriple(prelinkNodeTriple[0]);
+        if (linkNodeTriple) {
+            arcsToRemove.push(linkNodeTriple[0], linkNodeTriple[1]);
+            newTriples.push([linkNodeTriple[2], prelinkNodeTriple[1], keyword]);
+        }
+        const arcsToRemoveAddrs = arcsToRemove.map(({addr}) => addr);
+        return this.removeArcs(arcsToRemoveAddrs, triples).concat(newTriples);
+    }
+
+    transformRelation(rel = 'nrel_using_constants') {
+        return function (triples, keywords)
+        {
+            const arcsToRemove = [];
+            const combinationKeyNode = this.getKeynode(rel);
+
+            const foundTriples = this.tripleUtils.find3_a_a_f(sc_type_node_tuple, sc_type_arc_pos_const_perm, keywords[0].addr);
+
+            foundTriples.forEach(triple => {
+                if (this.tripleUtils.find5_f_a_a_a_f(
+                    triple[0].addr,
+                    sc_type_arc_common,
+                    sc_type_node,
+                    sc_type_arc_pos_const_perm,
+                    combinationKeyNode).length !== 0) {
+                    arcsToRemove.push(triple[1]);
+                }
+            });
+            const arcsToRemoveAddrs = arcsToRemove.map(({addr}) => addr);
+            return this.removeArcs(arcsToRemoveAddrs, triples);
+        }
+    }
+
+    transformUsingConstants = this.transformRelation();
+    transformCombination = this.transformRelation('nrel_combination');
+
     findPreLinkNodeTriple(translationNode) {
         const nrelScTextTranslation = this.getKeynode("nrel_sc_text_translation");
         const triples = this.tripleUtils.find5_a_a_f_a_f(
@@ -145,7 +193,7 @@ class ExpertModeManager {
             translationNode.addr,
             sc_type_arc_pos_const_perm,
             nrelScTextTranslation);
-        return triples.length && triples[0];
+        return Array.isArray(triples) && triples[0];
     }
 
     findLinkNodeTriple(preLinkNode) {
