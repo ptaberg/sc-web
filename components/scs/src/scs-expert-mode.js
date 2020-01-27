@@ -33,8 +33,8 @@ class ExpertModeManager {
             (triples) => this.removeExpertSystemIdTriples(triples),
             (triples) => this.transformKeyScElement(triples, keywords),
             (triples) => this.transformTextTranslation(triples, keywords),
-            (triples) => this.transformContsCombitation(triples, keywords),
-            (triples) => this.transformContsCombitation(triples, keywords, 'nrel_combination'),
+            (triples) => this.transformUsingConstants(triples, keywords),
+            (triples) => this.transformCombination(triples, keywords),
         ];
         filters.forEach(filter => {
             this.initTripleUtils(filteredTriples);
@@ -149,7 +149,6 @@ class ExpertModeManager {
         if (!prelinkNodeTriple) return triples;
         const arcsToRemove = [];
         const newTriples = [];
-        //arcsToRemove.push(prelinkNodeTriple[1], prelinkNodeTriple[3]);
 
         const linkNodeTriple = this.findLinkNodeTriple(prelinkNodeTriple[0]);
         if (linkNodeTriple) {
@@ -160,24 +159,31 @@ class ExpertModeManager {
         return this.removeArcs(arcsToRemoveAddrs, triples).concat(newTriples);
     }
 
-    transformContsCombitation(triples, keywords, rel = 'nrel_using_constants') {
-        const arcsToRemove = [];
-        const combinationKeyNode = this.getKeynode(rel);
-        const foundTriples = this.tripleUtils.find3_a_a_f(sc_type_node_tuple, sc_type_arc_pos_const_perm, keywords[0].addr);
+    transformRelation(rel = 'nrel_using_constants') {
+        return function (triples, keywords)
+        {
+            const arcsToRemove = [];
+            const combinationKeyNode = this.getKeynode(rel);
 
-        foundTriples.forEach(triple => {
-            if (this.tripleUtils.find5_f_a_a_a_f(
+            const foundTriples = this.tripleUtils.find3_a_a_f(sc_type_node_tuple, sc_type_arc_pos_const_perm, keywords[0].addr);
+
+            foundTriples.forEach(triple => {
+                if (this.tripleUtils.find5_f_a_a_a_f(
                     triple[0].addr,
                     sc_type_arc_common,
                     sc_type_node,
                     sc_type_arc_pos_const_perm,
                     combinationKeyNode).length !== 0) {
-                arcsToRemove.push(triple[1]);
-            }
-        });
-        const arcsToRemoveAddrs = arcsToRemove.map(({addr}) => addr);
-        return this.removeArcs(arcsToRemoveAddrs, triples);
+                    arcsToRemove.push(triple[1]);
+                }
+            });
+            const arcsToRemoveAddrs = arcsToRemove.map(({addr}) => addr);
+            return this.removeArcs(arcsToRemoveAddrs, triples);
+        }
     }
+
+    transformUsingConstants = this.transformRelation();
+    transformCombination = this.transformRelation('nrel_combination');
 
     findPreLinkNodeTriple(translationNode) {
         const nrelScTextTranslation = this.getKeynode("nrel_sc_text_translation");
