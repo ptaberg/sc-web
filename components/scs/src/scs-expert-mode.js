@@ -187,7 +187,7 @@ class ExpertModeManager {
             translationNode.addr,
             sc_type_arc_pos_const_perm,
             nrelScTextTranslation);
-        return triples.length && triples[0];
+        return Array.isArray(triples) && triples[0];
     }
 
     findLinkNodeTriple(preLinkNode) {
