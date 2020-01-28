@@ -59,7 +59,6 @@ class SctpClient:
         while (len(res) < dataSize):
             data = self.sock.recv(dataSize - len(res))
             res += data
-            time.sleep(0.001)
         assert len(res) == dataSize
         
         return res 
