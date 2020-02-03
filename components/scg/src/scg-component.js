@@ -49,10 +49,26 @@ var scgViewerWindow = function (sandbox) {
             translateToSc: function (scene, callback, createUserDraft) {
                 return self.scStructTranslator.translateToSc(callback, createUserDraft);
             },
-            canEdit: this.sandbox.canEdit(),
+            canEdit: SCWeb.ui.UserPanel.is_authenticated,
             resolveControls: this.sandbox.resolveElementsAddr,
+            keyboardCallbacks: {
+            'onkeydown': function (event) {
+                self.scene.onKeyDown(event)
+            },
+            'onkeyup': function (event) {
+                self.scene.onKeyUp(event);
+            }}
         }
     );
+
+    var self = this;
+        $(window).on('keydown', function (d3_event) {
+            self.editor.keyboardCallbacks.onkeydown(d3_event);
+        }).on('keyup', function (d3_event) {
+            self.editor.keyboardCallbacks.onkeyup(d3_event);
+        }).on('keypress', function (d3_event) {
+
+        });
 
 
     this.receiveData = function (data) {

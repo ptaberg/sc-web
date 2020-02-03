@@ -82,7 +82,7 @@ SCg.Editor.prototype = {
         if (params.resolveControls)
             this.resolveControls = params.resolveControls;
 
-        this.canEdit = params.canEdit ? true : false;
+        this.canEdit = !!params.canEdit;
         this.initUI();
 
     },
@@ -830,6 +830,8 @@ SCg.Editor.prototype = {
                 this.showTool(this.toolDeleteFromDraft());
             }
             if (this.scene.selected_objects.length > 0) this.showTool(this.toolDelete());
+        } else {
+            this.hideTool(this.toolDeleteFromDraft());
         }
     },
 
