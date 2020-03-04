@@ -1,9 +1,9 @@
 #!/bin/bash
 
-sudo apt-get install nodejs
-sudo apt-get install npm
-sudo npm cache clean -f
-sudo npm install -g n
-sudo n stable
+apt-get -y install nodejs
+apt-get -y install npm
+npm cache clean -f
+npm install -g n
+n stable
 echo "Installing grunt"
-sudo npm install -g grunt-cli
+npm install -g grunt-cli
