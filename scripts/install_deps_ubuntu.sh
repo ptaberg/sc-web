@@ -1,2 +1,2 @@
-sudo apt-get install python-pip
-sudo pip install tornado sqlalchemy redis==2.9 numpy configparser
+apt-get -y install python-pip
+pip install tornado sqlalchemy redis==2.9 numpy configparser
